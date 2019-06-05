@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -29,7 +31,7 @@ func lerArquivo(fileName string) error {
 	wg.Add(1)
 	file, err := os.Open(fileName)
 	if err != nil {
-		return errors.New("Erro ao ler arquvo")
+		return errors.New("Erro ao ler arquivo")
 	}
 
 	defer file.Close()
@@ -37,19 +39,32 @@ func lerArquivo(fileName string) error {
 
 	for scanner.Scan() {
 		palavra := strings.ToLower(scanner.Text())
-
 		imprimir(palavra)
+
 	}
 
 	wg.Done()
 	return nil
 
 	/*   func dividirarquivo (file string) error {
-
 	     } */
 
 }
 
-func imprimir(r string) {
-	fmt.Println(r + "dfgdfgd ")
+func removeSpecialCharacters(s string){
+	reg, err := regexp.Compile("[[:punct:]0-9]+")
+	if err != nil {
+		log.Fatal(err)
+	}
+	processedText := reg.ReplaceAllString(s, "")
+
+	fmt.Printf(processedText)
+
 }
+
+
+func imprimir(r string) {
+	removeSpecialCharacters(r)
+	//fmt.Println(r+ "gdusidh")
+}
+
