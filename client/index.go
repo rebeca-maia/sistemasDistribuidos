@@ -12,6 +12,7 @@ import (
 )
 
 var wg sync.WaitGroup
+var m = make(map[string]int)
 
 func main() {
 	for _, f := range os.Args[1:] {
@@ -29,6 +30,7 @@ func main() {
 
 func lerArquivo(fileName string) error {
 	wg.Add(1)
+
 	file, err := os.Open(fileName)
 	if err != nil {
 		return errors.New("Erro ao ler arquivo")
@@ -39,6 +41,7 @@ func lerArquivo(fileName string) error {
 
 	for scanner.Scan() {
 		palavra := strings.ToLower(scanner.Text())
+		m[palavra] = 0
 		imprimir(palavra)
 
 	}
