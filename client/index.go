@@ -1,6 +1,8 @@
 package main
 
 import (
+	zmq "github.com/pebbe/zmq4"
+
 	"bufio"
 	"errors"
 	"fmt"
@@ -12,20 +14,33 @@ import (
 var wg sync.WaitGroup
 
 func main() {
+
+	sender, _ := zmq.NewSocket(zmq.PUSH)
+	defer sender.Close()
+	sender.Bind("tcp://*:5557")
+
+	//  Socket to send start of batch message on
+	sink, _ := zmq.NewSocket(zmq.PUSH)
+	defer sink.Close()
+	sink.Connect("tcp://localhost:5558")
+
+	sink.Send("0", 0)
+
 	for _, f := range os.Args[1:] {
 		wg.Add(1)
 
 		go func(fileName string) {
-			if err := lerArquivo(fileName); err != nil {
+			if err := lerArquivo(fileName, sender); err != nil {
 				fmt.Println(err.Error())
 			}
 			wg.Done()
 		}(f)
 	}
 	wg.Wait()
+
 }
 
-func lerArquivo(fileName string) error {
+func lerArquivo(fileName string, sender *zmq.Socket) error {
 	wg.Add(1)
 	file, err := os.Open(fileName)
 	if err != nil {
@@ -34,22 +49,17 @@ func lerArquivo(fileName string) error {
 
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
+	//scanner.Split(bufio.)
 
 	for scanner.Scan() {
 		palavra := strings.ToLower(scanner.Text())
+		if palavra != "" {
+			sender.Send(palavra, 0)
+		}
 
-		imprimir(palavra)
 	}
 
 	wg.Done()
 	return nil
 
-	/*   func dividirarquivo (file string) error {
-
-	     } */
-
-}
-
-func imprimir(r string) {
-	fmt.Println(r + "dfgdfgd ")
 }
