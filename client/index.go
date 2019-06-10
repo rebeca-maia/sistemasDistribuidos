@@ -41,7 +41,7 @@ func lerArquivo(fileName string) error {
 
 	for scanner.Scan() {
 		palavra := strings.ToLower(scanner.Text())
-		m[palavra] = 0
+		m[palavra] =0
 		imprimir(palavra)
 
 	}

@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	w:= new(words)
+	w:=new(words)
 
 	//map de entrada
 	m =make(map[string]int)
@@ -32,7 +32,7 @@ func main() {
 
 		//  Do the work
 		for k:= range m{
-		w.add(k,m[k])
+		w.add(k)
 		}
 
 		//  Send results to sink
@@ -46,15 +46,37 @@ type words struct {
 	found map[string]int
 }
 
-func (w *words) add(word string, n int) {
+func (w *words) add(word string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	count, ok := w.found[word]
 	if !ok {
-		w.found[word] = n
+		w.found[word] = 0
 		return
 	}
-	w.found[word] = count + n
+	w.found[word] = count + 1
+}
+/* Ex.: Outra forma de contar a ocorrência de palavras
+func wordCount(str string) map[string]int {
+    wordList := strings.Fields(str)
+    counts := make(map[string]int)
+    for _, word := range wordList {
+        _, ok := counts[word]
+        if ok {
+            counts[word] += 1
+        } else {
+            counts[word] = 1
+        }
+    }
+    return counts
 }
 
+func main() {
+    strLine := "Australia Canada Germany Australia Japan Canada"
+    for index,element := range wordCount(strLine){
+        fmt.Println(index,"=>",element)
+    }
+}
+}
+*/
