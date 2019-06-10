@@ -71,3 +71,4 @@ func imprimir(r string) {
 	//fmt.Println(r+ "gdusidh")
 }
 
+>>>>>>> 27d9678ed8b42aab31554ae5f2bb4dc2700f55b1
