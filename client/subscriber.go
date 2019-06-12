@@ -2,23 +2,60 @@ package main
 
 import (
 	"fmt"
-	"strings"
+	//"strings"
+	"net"
+	//"net/http"
+	"net/rpc"
+	"net/rpc/jsonrpc"
+	"os"
 	"sync"
-
-	zmq "github.com/pebbe/zmq4"
+	//zmq "github.com/pebbe/zmq4"
 )
 
-type words struct {
-  sync.Mutex
-  found map[string]int
+// Words struct
+type Words struct {
+	Messagens string
+}
+
+//Menssage String
+type Menssage Words
+
+// Count func
+func (m *Menssage) Count(word *Words, reply *int) error {
+	fmt.Println("exc")
+	fmt.Println(word.Messagens)
+	return nil
 }
 
 func main() {
+
+	menssage := new(Menssage)
+	rpc.Register(menssage)
+	/*	rpc.HandleHTTP() */
+
+	/* err := http.ListenAndServe(":1243", nil)
+	if err != nil {
+		fmt.Println(err.Error())
+	} */
+
+	tcpAddr, err := net.ResolveTCPAddr("tcp", ":1234")
+	checkError(err)
+
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	checkError(err)
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			continue
+		}
+		jsonrpc.ServeConn(conn)
+	}
 	//  Socket to talk to server
 	fmt.Println("Agrupando palavras vindas dos workers...")
-	subscriber, _ := zmq.NewSocket(zmq.SUB)
-	defer subscriber.Close()
-	subscriber.Connect("tcp://localhost:5556")
+	/* 	subscriber, _ := zmq.NewSocket(zmq.SUB)
+	   	defer subscriber.Close()
+	   	subscriber.Connect("tcp://localhost:5556") */
 
 	var wg sync.WaitGroup
 
@@ -33,36 +70,34 @@ func main() {
 	// 	}
 	// }
 	//mutex.Unlock()
-	m := newWords()
+	//m := newWords()
 
 	for {
-    m.Lock()
+		//m.Lock()
+		//msg, _ := subscriber.Recv(0)
+		//palavra := strings.Fields(msg)
+		/* for _, word := range palavra {
 
-		msg, _ := subscriber.Recv(0)
-		palavra := strings.Fields(msg)
-		for _, word := range palavra {
+		      m.add(word, 1)
 
-      m.add(word, 1)
+				} */
 
-		}
-
-		for pala, ocor := range m.found {
-			if ocor > 1 {
-				fmt.Printf("%s: %d\n", pala, ocor)
-			}
-    }
-    m.Unlock()
+		/* 		for pala, ocor := range m.found {
+					if ocor > 1 {
+						fmt.Printf("%s: %d\n", pala, ocor)
+					}
+		    } */
+		//m.Unlock()
 	}
-
 }
 
-func newWords() *words {
-	return &words{found: map[string]int{}}
+/* func newWords() *Words {
+	return &Words{found: map[string]int{}}
 }
 
-func (w *words) add (word string, n int){
-  w.Lock()
-  defer w.Unlock()
+func (w *Words) add (word string, n int){
+  //w.Lock()
+  //defer w.Unlock()
 
   count, ok := w.found[word]
 
@@ -72,4 +107,11 @@ func (w *words) add (word string, n int){
   }
 
   w.found[word] = count + n
+} */
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println("Fatal error ", err.Error())
+		os.Exit(1)
+	}
 }
