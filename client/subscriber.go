@@ -3,59 +3,115 @@ package main
 import (
 	"fmt"
 	//"strings"
-	"net"
+	//"net"
 	//"net/http"
-	"net/rpc"
-	"net/rpc/jsonrpc"
+	//"net/rpc"
+	//"net/rpc/jsonrpc"
+	"log"
 	"os"
 	"sync"
+
+	"github.com/streadway/amqp"
 	//zmq "github.com/pebbe/zmq4"
 )
 
-// Words struct
+/* // Words struct
 type Words struct {
 	Messagens string
 }
 
 //Menssage String
 type Menssage Words
+*/
+type Cont struct {
+	sync.Mutex
+	found map[string]int
+}
 
-// Count func
-func (m *Menssage) Count(word *Words, reply *int) error {
-	fmt.Println("exc")
-	fmt.Println(word.Messagens)
-	return nil
+var (
+	j *Cont
+)
+
+func erroMensage(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
 }
 
 func main() {
+	var wg sync.WaitGroup
+	/* 	menssage := new(Menssage)
+	   	rpc.Register(menssage)
 
-	menssage := new(Menssage)
-	rpc.Register(menssage)
-	/*	rpc.HandleHTTP() */
+	   	tcpAddr, err := net.ResolveTCPAddr("tcp", ":1234")
+	   	checkError(err)
 
-	/* err := http.ListenAndServe(":1243", nil)
-	if err != nil {
-		fmt.Println(err.Error())
-	} */
+	   	listener, err := net.ListenTCP("tcp", tcpAddr)
+	   	checkError(err) */
 
-	tcpAddr, err := net.ResolveTCPAddr("tcp", ":1234")
-	checkError(err)
+	//Rabbit
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	erroMensage(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
 
-	listener, err := net.ListenTCP("tcp", tcpAddr)
-	checkError(err)
+	ch, err := conn.Channel()
+	erroMensage(err, "Failed to open a channel")
+	defer ch.Close()
 
-	for {
+	w := newWords()
+
+	q, err := ch.QueueDeclare(
+		"task_cont",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	erroMensage(err, "Falha ao declara fila")
+
+	err = ch.Qos(1, 0, false)
+
+	msgs, err := ch.Consume(
+		q.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	erroMensage(err, "Falha ao registra Consumidor")
+
+	run := make(chan bool)
+	go func() {
+		for d := range msgs {
+			wg.Add(1)
+			palavra := string(d.Body)
+			w.found[palavra]++
+			wg.Done()
+			d.Ack(false)
+		}
+		//imprime(w)
+
+	}()
+	wg.Wait()
+	println("-------------------Contagem---------------------------")
+
+	<-run
+	print("Terminou")
+	/* for {
 		conn, err := listener.Accept()
 		if err != nil {
 			continue
 		}
 		jsonrpc.ServeConn(conn)
 	}
+
+	//w := newWords()
 	//  Socket to talk to server
 	fmt.Println("Agrupando palavras vindas dos workers...")
-	/* 	subscriber, _ := zmq.NewSocket(zmq.SUB)
-	   	defer subscriber.Close()
-	   	subscriber.Connect("tcp://localhost:5556") */
 
 	var wg sync.WaitGroup
 
@@ -63,51 +119,68 @@ func main() {
 	wg.Wait()
 
 	fmt.Println("Ocorrências de cada palavra:")
-	//mutex.Lock()
-	// for word, count := range w.found {
-	// 	if count > 1 {
-	// 		fmt.Printf("%s: %d\n", word, count)
-	// 	}
-	// }
-	//mutex.Unlock()
-	//m := newWords()
+	j.Lock()
+	for word, count := range j.found {
+		if count > 1 {
+			fmt.Printf("%s: %d\n", word, count)
+		}
+	}
+	j.Unlock()
 
-	for {
-		//m.Lock()
-		//msg, _ := subscriber.Recv(0)
-		//palavra := strings.Fields(msg)
-		/* for _, word := range palavra {
+	println("Hãm") */
+	/* for {
+	//m.Lock()
+	//msg, _ := subscriber.Recv(0)
+	//palavra := strings.Fields(msg)
+	/* for _, word := range palavra {
 
-		      m.add(word, 1)
+	      m.add(word, 1)
 
-				} */
+			} */
 
-		/* 		for pala, ocor := range m.found {
+	/* 		for pala, ocor := range m.found {
 					if ocor > 1 {
 						fmt.Printf("%s: %d\n", pala, ocor)
 					}
-		    } */
+		    }
 		//m.Unlock()
+	} */
+}
+
+func imprime(p *Cont) {
+	for word, count := range p.found {
+		if count > 1 {
+			fmt.Printf("%s: %d\n", word, count)
+		}
 	}
+
 }
 
-/* func newWords() *Words {
-	return &Words{found: map[string]int{}}
-}
+/* func addMap(p string) {
+	pl := newWords()
+	pl.Lock()
+	pl.add(p, 0)
+	pl.Unlock()
 
-func (w *Words) add (word string, n int){
-  //w.Lock()
-  //defer w.Unlock()
-
-  count, ok := w.found[word]
-
-  if !ok {
-    w.found[word] = n
-    return
-  }
-
-  w.found[word] = count + n
 } */
+
+func newWords() *Cont {
+	return &Cont{found: map[string]int{}}
+}
+
+func (w *Cont) add(word string, n int) {
+	w.Lock()
+	defer w.Unlock()
+
+	count, ok := w.found[word]
+
+	if !ok {
+		w.found[word] = n
+		return
+	}
+
+	w.found[word] = count + n
+}
 
 func checkError(err error) {
 	if err != nil {
@@ -115,3 +188,13 @@ func checkError(err error) {
 		os.Exit(1)
 	}
 }
+
+/* //Count word function
+func (m *Menssage) Count(word *Words, reply *int) error {
+	fmt.Println(word.Messagens)
+	pl := newWords()
+
+	pl.add(word.Messagens, 1)
+
+	return nil
+} */
